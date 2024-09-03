@@ -27,7 +27,7 @@ class JulieBot(commands.Bot):
 
     # on connect
     async def event_ready(self):
-        logger.info(f'Logged in as {self.nick} and user id {self.user_id}')
+        logger.info(f'logged in as {self.nick} and user id {self.user_id}')
 
     # message handler
     async def event_message(self, message):
@@ -40,11 +40,20 @@ class JulieBot(commands.Bot):
 
         await self.handle_commands(message)
 
+    # songlist
+    @commands.cooldown(rate=1, per=10, bucket=commands.Bucket.channel)
+    @commands.command()
+    async def songlist(self, ctx: commands.Context):
+        await self.send_message_to_chat(f'hey @{ctx.author.name}, here\'s the song list link! https://www.streamersonglist.com/t/julie_never_streams/songs')
+
     # routine definitions
     @routines.routine(minutes=5, wait_first=True)
     async def automated_songbot_helper(self):
         if not self._last_message_was_me:
-            await self.send_message_to_chat(f'SongBot quickstart: !list for a link to a full menu of songs, !request <song> to request a specific song.')
+            await self.send_message_to_chat(f'SongBot quickstart: !songlist for a link to a full menu of songs <3')
+
+        else:
+            logger.info(f'skipping automated songbot helper; last message was sent by me: {self._last_message_was_me}')
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)-15s [%(levelname)s] %(funcName)s: %(message)s")

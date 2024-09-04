@@ -27,20 +27,27 @@ class PunsCog(commands.Cog):
         self._pun_vote_started_timestamp = datetime.now()
         self._pun_votes = {}
         self._pun_id = 0
+        self._pun_min_rating = int(os.environ['PUNS_COG_MIN_RATING'])
+        self._pun_max_rating = int(os.environ['PUNS_COG_MAX_RATING'])
+
+        # default to 1-5 if the settings are wonky
+        if self._pun_min_rating >= self._pun_max_rating:
+            self._pun_min_rating = 1
+            self._pun_max_rating = 5
 
         self.PUN_VOTE_WINDOW = timedelta(seconds=int(os.environ['PUNS_COG_PUN_VOTE_WINDOW']))
         self.MAX_PUN_API_RETRIES = int(os.environ['PUNS_COG_PUN_API_RETRIES'])
 
         self.automated_pun_vote.start()
 
-    async def send_message_to_chat(self, message: str):
+    async def send_message_to_chat(self, message: str) -> None:
         for channel in self.bot.connected_channels:
             await channel.send(message)
 
     # random pun
-    @commands.cooldown(rate=1, per=30, bucket=commands.Bucket.channel)
+    @commands.cooldown(rate=1, per=int(os.environ['PUNS_COG_PUN_COOLDOWN_PER_USER']), bucket=commands.Bucket.channel)
     @commands.command()
-    async def pun(self, ctx: commands.Context):
+    async def pun(self, ctx: commands.Context) -> None:
         pun, is_new = self.get_pun_from_api()
 
         if pun is None:
@@ -51,32 +58,32 @@ class PunsCog(commands.Cog):
         self._pun_vote_started_timestamp = datetime.now()
 
         await self.send_message_to_chat(f'{pun.pun_text}')
-        await self.send_message_to_chat(f'please rate my pun using !ratepun <1-10>, 1 (terrible) to 10 (amazing)! voting will be open for the next 30 seconds... <3')
+        await self.send_message_to_chat(f'please rate my pun using !ratepun <{self._pun_min_rating}-{self._pun_max_rating}>, {self._pun_min_rating} (terrible) to {self._pun_max_rating} (amazing)! voting will be open for the next 30 seconds... <3')
 
         if not is_new:
             await self.send_message_to_chat(f'the last time this pun got picked, it was rated {pun.rating}')
 
     # rate pun
-    @commands.cooldown(rate=1, per=30, bucket=commands.Bucket.user)
+    @commands.cooldown(rate=1, per=int(os.environ['PUNS_COG_PUN_COOLDOWN_PER_USER']), bucket=commands.Bucket.user)
     @commands.command(aliases=("rp"))
-    async def ratepun(self, ctx: commands.Context, rating: int):
+    async def ratepun(self, ctx: commands.Context, rating: int) -> None:
         if ctx.author.name in self._pun_votes:
             return
         
         if not self._pun_vote_active:
             return
         
-        if rating > 10:
-            rating = 10
+        if rating > self._pun_max_rating:
+            rating = self._pun_max_rating
 
-        if rating < 1:
-            rating = 1
+        if rating < self._pun_min_rating:
+            rating = self._pun_min_rating
         
         self._pun_votes[ctx.author.name] = rating
 
     # ban pun
     @commands.command()
-    async def banpun(self, ctx: commands.Context):
+    async def banpun(self, ctx: commands.Context) -> None:
         if not ctx.author.is_broadcaster or ctx.author.is_mod:
             return
         
@@ -86,7 +93,7 @@ class PunsCog(commands.Cog):
         db.ban_pun(self._pun_id)
 
     @routines.routine(seconds=1)
-    async def automated_pun_vote(self):
+    async def automated_pun_vote(self) -> None:
         now_timestamp = datetime.now()
         if self._pun_vote_active and now_timestamp - self._pun_vote_started_timestamp > self.PUN_VOTE_WINDOW:
             self._pun_vote_active = False
@@ -111,7 +118,7 @@ class PunsCog(commands.Cog):
             self._pun_id = 0
 
     # pun api
-    def get_pun_from_api(self):
+    def get_pun_from_api(self) -> tuple[Pun|None, bool]:
         retry_count = 0
 
         while retry_count < self.MAX_PUN_API_RETRIES:

@@ -1,12 +1,12 @@
 import os
 import logging
 
-from datetime import datetime, timedelta
-
 from db import DB
 from cogs.puns import PunsCog
 from cogs.songs import SongsCog
-from twitchio.ext import commands, routines
+from cogs.mood import MoodCog
+
+from twitchio.ext import commands
 
 logger = logging.getLogger(__name__)
 db = DB.instance()
@@ -23,6 +23,7 @@ class JulieBot(commands.Bot):
         # cogs
         self.add_cog(PunsCog(self))
         self.add_cog(SongsCog(self))
+        self.add_cog(MoodCog(self))
 
     # message sender
     async def send_message_to_chat(self, message: str):

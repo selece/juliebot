@@ -11,7 +11,7 @@ db = DB.instance()
 
 class SongsCog(commands.Cog):
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
         self.last_message_was_me = False
@@ -22,12 +22,12 @@ class SongsCog(commands.Cog):
         self.automated_songbot_helper.start()
 
     # message sender
-    async def send_message_to_chat(self, message: str):
+    async def send_message_to_chat(self, message: str) -> None:
         for channel in self.bot.connected_channels:
             await channel.send(message)
 
     @commands.Cog.event()
-    async def event_message(self, message: str):
+    async def event_message(self, message: str) -> None:
         if message.echo:
             self._last_message_was_me = True
             return
@@ -39,12 +39,12 @@ class SongsCog(commands.Cog):
     # songlist
     @commands.cooldown(rate=1, per=int(os.environ['SONGS_COG_LIST_COMMAND_FREQUENCY']), bucket=commands.Bucket.channel)
     @commands.command(aliases=("list", "sl", "slist"))
-    async def songlist(self, ctx: commands.Context):
+    async def songlist(self, ctx: commands.Context) -> None:
         await self.send_message_to_chat(f'hey @{ctx.author.name}, here\'s the song list link! {os.environ['SONGS_COG_URL']}')
 
     # routine definitions
     @routines.routine(minutes=int(os.environ['SONGS_COG_HELPER_MESSAGE_FREQUENCY']), wait_first=True)
-    async def automated_songbot_helper(self):
+    async def automated_songbot_helper(self) -> None:
         if not self.last_message_was_me:
             await self.send_message_to_chat(f'song request quickstart: !songlist for a link to a full menu of songs <3')
 
@@ -52,7 +52,7 @@ class SongsCog(commands.Cog):
             logger.info(f'skipping automated songbot helper; last message was sent by me: {self.last_message_was_me}')
 
     @routines.routine(minutes=2, wait_first=True)
-    async def automated_chat_monitor(self):
+    async def automated_chat_monitor(self) -> None:
         now_timestamp = datetime.now()
         if now_timestamp - self.last_active_chat_timestamp > self.CHAT_INACTIVITY_TIMER:
             pass

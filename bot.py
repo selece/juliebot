@@ -67,10 +67,10 @@ class JulieBot(commands.Bot):
     @commands.cooldown(rate=1, per=30, bucket=commands.Bucket.channel)
     @commands.command()
     async def pun(self, ctx: commands.Context):
-        req: requests.Response = requests.get('https://punapi.rest/api/pun')
+        req: requests.Response = requests.get('https://punapi.rest/api/pun', headers={'user-agent': 'juliebot @ https://github.com/selece/juliebot'})
 
         if req.status_code != 200:
-            await self.send_message_to_chat(f'sorry @{ctx.author.name}! the pun api does\'nt seem to be working right now... BibleThump')
+            await self.send_message_to_chat(f'sorry @{ctx.author.name}! the pun api does not seem to be working right now... BibleThump')
             return
         
         json_response = req.json()
@@ -89,7 +89,7 @@ class JulieBot(commands.Bot):
         self._pun_vote_active = True
         self._pun_vote_started_timestamp = datetime.now()
         self._pun_id = pun_id
-        await self.send_message_to_chat(f'i have a pun for you @{ctx.author.name}: {pun_text}')
+        await self.send_message_to_chat(f'pun for you @{ctx.author.name}: {pun_text}')
         await self.send_message_to_chat(f'please rate my pun using !ratepun <1-10>, 1 (terrible) to 10 (amazing)! voting will be open for the next 30 seconds... <3')
 
         if pun_record is not None:

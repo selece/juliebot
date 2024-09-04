@@ -65,7 +65,7 @@ class DB:
     def get_pun_from_db(self, api_id: int):
         sql = '''SELECT * FROM puns WHERE api_id=?'''
         cursor = self.conn.cursor()
-        cursor.execute(sql, (api_id))
+        cursor.execute(sql, (api_id, ))
         rows = cursor.fetchall()
 
         if len(rows) > 1:
@@ -93,3 +93,7 @@ class DB:
             return True
         
         return len(rows) == 1
+    
+    def ban_pun(self, api_id: int):
+        sql = '''UPDATE puns SET ban=1 WHERE api_id=?'''
+        return self.run_sql_commit(sql, (api_id, ))

@@ -129,8 +129,6 @@ class PunsCog(commands.Cog):
         
             json_response = req.json()
 
-            logger.info(f'api result: {json_response}')
-
             pun_id: int = int(json_response['id'])
             pun_text: str = json_response['pun']
             pun_is_banned: bool = False

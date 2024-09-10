@@ -91,12 +91,12 @@ class MoodCog(commands.Cog):
             for twitch_id, mood in self._mood_updates.items():
                 logging.info(f'mood data: {twitch_id} {mood}')
 
-                user = db.get_user_from_db(twitch_id)
+                user = db.get_mooduser_from_db(twitch_id)
                 if user is None:
-                    db.add_user_to_db(twitch_id)
-                    user = db.get_user_from_db(twitch_id)
+                    db.add_mooduser_to_db(twitch_id)
+                    user = db.get_mooduser_from_db(twitch_id)
                 
-                db.record_user_mood(twitch_id, mood)
+                db.record_mooduser(twitch_id, mood)
                 logging.info(f'last mood: {twitch_id} -> {db.get_last_mood(twitch_id)}')
                 logging.info(f'average mood: {db.get_average_mood(twitch_id)}')
 

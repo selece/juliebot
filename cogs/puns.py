@@ -58,7 +58,7 @@ class PunsCog(commands.Cog):
         self._pun_vote_started_timestamp = datetime.now()
 
         await self.send_message_to_chat(f'{pun.pun_text}')
-        await self.send_message_to_chat(f'please rate my pun using !ratepun <{self._pun_min_rating}-{self._pun_max_rating}>, {self._pun_min_rating} (terrible) to {self._pun_max_rating} (amazing)! voting will be open for the next 30 seconds... <3')
+        await self.send_message_to_chat(f'please rate my pun using !ratepun <{self._pun_min_rating}-{self._pun_max_rating}>, {self._pun_min_rating} (terrible) to {self._pun_max_rating} (amazing)! voting will be open for the next {self.PUN_VOTE_WINDOW} seconds... <3')
 
         if not is_new:
             await self.send_message_to_chat(f'the last time this pun got picked, it was rated {pun.rating}')

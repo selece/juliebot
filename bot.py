@@ -5,6 +5,7 @@ from db import DB
 from cogs.puns import PunsCog
 from cogs.songs import SongsCog
 from cogs.mood import MoodCog
+from cogs.checkin import CheckInCog
 
 from twitchio.ext import commands
 
@@ -24,6 +25,7 @@ class JulieBot(commands.Bot):
         self.add_cog(PunsCog(self))
         self.add_cog(SongsCog(self))
         self.add_cog(MoodCog(self))
+        self.add_cog(CheckInCog(self))
 
     # message sender
     async def send_message_to_chat(self, message: str):

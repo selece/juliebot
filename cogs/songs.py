@@ -46,6 +46,7 @@ class SongsCog(commands.Cog):
     @routines.routine(minutes=int(os.environ['SONGS_COG_HELPER_MESSAGE_FREQUENCY']), wait_first=True)
     async def automated_songbot_helper(self) -> None:
         if not self.last_message_was_me:
+            self.last_message_was_me = True
             await self.send_message_to_chat(f'song request quickstart: !songlist for a link to a full menu of songs <3')
 
         else:

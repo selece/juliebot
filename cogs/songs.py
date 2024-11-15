@@ -3,11 +3,19 @@ import os
 
 from datetime import datetime, timedelta
 from twitchio.ext import commands, routines
+from twitchio.message import Message
 from db import DB
 
 
 logger = logging.getLogger(__name__)
 db = DB.instance()
+
+# to access these in decorators, they have to not be inside the class scope
+config_vars = {
+    "bot_nick": os.environ['BOT_NICK'],
+    "songlist_frequency": int(os.environ['SONGS_COG_LIST_COMMAND_FREQUENCY']),
+    "helper_message_frequency": int(os.environ['SONGS_COG_HELPER_MESSAGE_FREQUENCY']),
+}
 
 class SongsCog(commands.Cog):
 
@@ -15,10 +23,7 @@ class SongsCog(commands.Cog):
         self.bot = bot
 
         self.last_message_was_me = False
-        self.last_active_chat_timestamp = datetime.now()
 
-        self.CHAT_INACTIVITY_TIMER = timedelta(minutes=int(os.environ['CHAT_INACTIVITY_TIMER']))
-        self.automated_chat_monitor.start()
         self.automated_songbot_helper.start()
 
     # message sender
@@ -27,33 +32,16 @@ class SongsCog(commands.Cog):
             await channel.send(message)
 
     @commands.Cog.event()
-    async def event_message(self, message: str) -> None:
-        if message.echo:
-            self._last_message_was_me = True
-            return
-        
-        else:
-            self._last_message_was_me = False
-            self._last_active_chat_timestamp = datetime.now()
+    async def event_message(self, message: Message) -> None:
+        return
 
     # songlist
-    @commands.cooldown(rate=1, per=int(os.environ['SONGS_COG_LIST_COMMAND_FREQUENCY']), bucket=commands.Bucket.channel)
+    @commands.cooldown(rate=1, per=config_vars["songlist_frequency"], bucket=commands.Bucket.channel)
     @commands.command(aliases=("list", "sl", "slist"))
     async def songlist(self, ctx: commands.Context) -> None:
         await self.send_message_to_chat(f'hey @{ctx.author.name}, here\'s the song list link! {os.environ['SONGS_COG_URL']}')
 
     # routine definitions
-    @routines.routine(minutes=int(os.environ['SONGS_COG_HELPER_MESSAGE_FREQUENCY']), wait_first=True)
+    @routines.routine(minutes=config_vars["helper_message_frequency"], wait_first=False)
     async def automated_songbot_helper(self) -> None:
-        if not self.last_message_was_me:
-            self.last_message_was_me = True
-            await self.send_message_to_chat(f'song request quickstart: !songlist for a link to a full menu of songs <3')
-
-        else:
-            logger.info(f'skipping automated songbot helper; last message was sent by me: {self.last_message_was_me}')
-
-    @routines.routine(minutes=2, wait_first=True)
-    async def automated_chat_monitor(self) -> None:
-        now_timestamp = datetime.now()
-        if now_timestamp - self.last_active_chat_timestamp > self.CHAT_INACTIVITY_TIMER:
-            pass
+        await self.send_message_to_chat(f'song request quickstart: !list for a link to a full menu of songs <3')

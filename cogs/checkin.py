@@ -19,6 +19,11 @@ class CheckInCog(commands.Cog):
         if db.add_broadcast_to_db():
             self.checkins_allowed = True
 
+    # message sender
+    async def send_message_to_chat(self, message: str) -> None:
+        for channel in self.bot.connected_channels:
+            await channel.send(message)
+
     @commands.cooldown(rate=1, per=1, bucket=commands.Bucket.user)
     @commands.command(aliases=("c", "check", "ci"))
     async def checkin(self, ctx: commands.Context) -> None:
@@ -29,5 +34,7 @@ class CheckInCog(commands.Cog):
             return
         
         self.checkins.append(ctx.author.id)
-        db.record_checkinuser(ctx.author.id)
+        watch_streak = db.record_checkinuser(ctx.author.id)
+        await self.send_message_to_chat(f'@{ctx.author.name} checked in! julien130Lopheart current watch streak: {watch_streak}')
+
         

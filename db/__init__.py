@@ -125,7 +125,7 @@ class DB:
         
         return res
     
-    def record_checkinuser(self, twitch_id: int) -> None:
+    def record_checkinuser(self, twitch_id: int) -> int:
         user = self.get_checkinuser_from_db(twitch_id)
         if user is None:
             self.add_checkinuser_to_db(twitch_id)
@@ -139,18 +139,19 @@ class DB:
         else:
             was_here_last_broadcast = user[3] == last_broadcast[0]
         
-        new_user_streak = int(user[4])
-        if was_here_last_broadcast:
-            new_user_streak += 1
-        else:
-            new_user_streak = 0
+        watch_streak = int(user[4])
 
         now_timestamp = datetime.now()
         if now_timestamp - datetime.fromtimestamp(int(user[2])) < timedelta(seconds=TWELVE_HOURS_IN_SECONDS):
-            return
+            return watch_streak
         
-        self.run_sql_commit('''UPDATE checkin_users SET last_seen=?, last_seen_broadcast=?, watch_streak=? WHERE id=?''', (now_timestamp, last_broadcast[0], new_user_streak, user[0]))
-
+        if was_here_last_broadcast:
+            watch_streak += 1
+        else:
+            watch_streak = 0
+        
+        self.run_sql_commit('''UPDATE checkin_users SET last_seen=?, last_seen_broadcast=?, watch_streak=? WHERE id=?''', (now_timestamp, last_broadcast[0], watch_streak, user[0]))
+        return watch_streak
         
     # mood
     def init_mood_db(self) -> None:

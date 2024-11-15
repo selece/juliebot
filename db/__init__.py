@@ -115,7 +115,7 @@ class DB:
                 return None
 
     def add_checkinuser_to_db(self, twitch_id: int) -> None:
-        self.run_sql_commit('''INSERT INTO checkin_users(twitch_id, last_seen, last_seen_broadcast, watch_streak) VALUES(?, ?, ?, ?)''', (twitch_id, int(datetime.now().strftime('%s')), -1, 0))
+        self.run_sql_commit('''INSERT INTO checkin_users(twitch_id, last_seen, last_seen_broadcast, watch_streak) VALUES(?, ?, ?, ?)''', (twitch_id, int(datetime.now().strftime('%s')), -1, 1))
 
     def get_checkinuser_from_db(self, twitch_id: int) -> tuple:
         res = self.run_sql_query('''SELECT * FROM checkin_users WHERE twitch_id=?''', (twitch_id, ))
@@ -148,7 +148,7 @@ class DB:
         if was_here_last_broadcast:
             watch_streak += 1
         else:
-            watch_streak = 0
+            watch_streak = 1
         
         self.run_sql_commit('''UPDATE checkin_users SET last_seen=?, last_seen_broadcast=?, watch_streak=? WHERE id=?''', (now_timestamp, last_broadcast[0], watch_streak, user[0]))
         return watch_streak

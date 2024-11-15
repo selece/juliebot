@@ -27,6 +27,9 @@ class CheckInCog(commands.Cog):
     @commands.cooldown(rate=1, per=1, bucket=commands.Bucket.user)
     @commands.command(aliases=("c", "check", "ci"))
     async def checkin(self, ctx: commands.Context) -> None:
+        if not self.checkins_allowed:
+            return
+
         logging.info(f'checkin for user: {ctx.author.name} {ctx.author.id}')
         
         if ctx.author.id in self.checkins:

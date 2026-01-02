@@ -5,15 +5,18 @@ import logging
 import requests
 
 import asyncio
-import sqlite3
 import asqlite
 
 from dotenv import load_dotenv
 
 import twitchio
-from twitchio.authentication import UserTokenPayload
 from twitchio.ext import commands
 from twitchio import eventsub
+
+from commands.command_adbreak import CommandAdbreak
+from commands.command_songlist import CommandSongList
+from commands.command_raidmsg import CommandRaidMsg
+from commands.command_vlc import CommandVlc
 
 from typing import TYPE_CHECKING
 
@@ -34,27 +37,6 @@ class JulieBot(commands.AutoBot):
             force_subscribe=True,
         )
 
-    async def setup_hook(self) -> None:
-        await self.add_component(CustomCommandsComponent())
-
-    async def event_oauth_authorized(self, payload: UserTokenPayload) -> None:
-        await self.add_token(payload.access_token, payload.refresh_token)
-
-        if not payload.user_id:
-            return
-        
-        if payload.user_id == self.bot_id:
-            return
-        
-        subs: list[eventsub.SubscriptionPayload] = [
-            eventsub.ChatMessageSubscription(broadcaster_user_id=payload.user_id, user_id=self.bot_id),
-            eventsub.ChannelSubscribeSubscription(broadcaster_user_id=payload.user_id),
-        ]
-
-        resp: twitchio.MultiSubscribePayload = await self.multi_subscribe(subs)
-        if resp.errors:
-            LOGGER.warning("Failed to subscribe to %r using user %r", resp.errors, payload.user_id)
-
     async def add_token(self, token: str, refresh: str) -> twitchio.authentication.ValidateTokenPayload:
         resp: twitchio.authentication.ValidateTokenPayload = await super().add_token(token, refresh)
 
@@ -72,82 +54,28 @@ class JulieBot(commands.AutoBot):
 
         LOGGER.info("Added token to db for user: %s", resp.user_id)
         return resp
+    
+    async def setup_hook(self) -> None:
+        await self.add_component(CommandAdbreak())
+        await self.add_component(CommandSongList())
+        await self.add_component(CommandRaidMsg())
+        await self.add_component(CommandVlc())
 
     async def event_ready(self) -> None:
         LOGGER.info("OK: logged in as %s", self.bot_id)
 
-class CustomCommandsComponent(commands.Component):
-    def __init__(self):
-        pass
-
-    @commands.Component.listener()
-    async def event_message(self, payload: twitchio.ChatMessage) -> None:
-        LOGGER.info(f"[{payload.broadcaster.name}] - {payload.chatter.name}: {payload.text}")
-
     async def event_subscription(self, payload: twitchio.ChannelSubscribe) -> None:
         LOGGER.info(f"subscribe: {payload.user} @ {payload.tier}")
-        
-    @commands.command(aliases=["songs", "sl", "list"])
-    @commands.cooldown(rate=1, per=60, key=commands.BucketType.channel)
-    async def songlist(self, ctx: commands.Context) -> None:
-        await ctx.reply(f"@{ctx.chatter.name}, here's the link: https://t.ly/ezltR")
 
-    @commands.command()
-    @commands.is_elevated()
-    async def adbreak(self, ctx: commands.Context) -> None:
-        await ctx.send("!!! we're going on ad break shortly - we run 3m ads to fully poof away the pre-roll ads, so please sit tight! don't worry, no requests or music will be happening during the ads julien130Lopheart !!!")
+    async def event_ad_break(self, payload: twitchio.ChannelAdBreakBegin) -> None:
+        await payload.respond(f"Ad break is starting now! Nothing interesting will happen until we're back, *pinky promise*. <3")
 
-    @commands.command()
-    @commands.is_elevated()
-    async def raidmsg(self, ctx: commands.Context) -> None:
-        await ctx.send(f"!!! we're raiding out - please copy the following message and give them all of the warm and fuzzy plink-plonks when you arrive !!!")
-        await ctx.send("julien130Namalove plink plonks peeps have arrived! julien130Namalove")
+    async def event_custom_redemption_add(self, payload: twitchio.ChannelPointsRedemptionAdd) -> None:
+        # await payload.respond(f"okies! {payload.reward.id} for {payload.reward.cost} from {payload.user.id}")
+        LOGGER.info(f"okies! {payload.reward.id} for {payload.reward.cost} from {payload.user.id}")
 
-    @commands.command(aliases=["what"])
-    @commands.cooldown(rate=1, per=datetime.timedelta(seconds=5), key=commands.BucketType.channel)
-    async def whatsong(self, ctx: commands.Context) -> None:
-        req = requests.get("http://localhost:8080/requests/status.json", auth=("", "vlc"))
-
-        if req.status_code != 200:
-            await ctx.reply(f"oops! some sort of weird error happened and i'm not sure what to do with it. sorry!")
-            return
-        
-        json_resp = json.loads(req.text)
-        if json_resp["state"] != "playing":
-            await ctx.reply(f"hmm, it doesn't look like we're currently playing a song...")
-            return
-        
-        album = json_resp["information"]["category"]["meta"]["album"]
-        artist = json_resp["information"]["category"]["meta"]["artist"]
-        title = json_resp["information"]["category"]["meta"]["title"]
-        await ctx.reply(f"{title} - {album} ({artist})")
-
-    @commands.command(aliases=["next"])
-    @commands.cooldown(rate=1, per=datetime.timedelta(seconds=30), key=commands.BucketType.channel)
-    async def nextsong(self, ctx: commands.Context) -> None:
-        req = requests.get("http://localhost:8080/requests/status.json", auth=("", "vlc"))
-
-        if req.status_code != 200:
-            await ctx.reply(f"oops! some sort of weird error happened and i'm not sure what to do with it. sorry!") 
-            return
-        
-        json_resp = json.loads(req.text)
-        if json_resp["state"] != "playing":
-            await ctx.reply(f"hmm, it doesn't look like we're currently playing a song...")
-            return
-
-        req = requests.get("http://localhost:8080/requests/status.xml?command=pl_next", auth=("", "vlc"))
-
-        if req.status_code != 200:
-            await ctx.reply(f"oops! some sort of weird error happened and i'm not sure what to do with it. sorry!")
-            return
-        
-        await ctx.reply(f"okiedokie, skipping to next song on the breaktime playlist! (we can't skip a song for another 30 seconds)")
-
-    @commands.command()
-    @commands.cooldown(rate=1, per=datetime.timedelta(seconds=15), key=commands.BucketType.user)
-    async def help(self, ctx: commands.Context) -> None:
-        await ctx.reply(f"available commands [+aliases]: !songlist [!list !songs !sl]; !whatsong [!what]; !nextsong [!next]")
+    async def event_follow(self, payload: twitchio.ChannelFollow) -> None:
+        await payload.respond(f"Thanks for the follow! Follows are 100% anonymous - please make yourself comfy and cozy!")
 
 async def setup_database(db: asqlite.Pool) -> tuple[list[tuple[str, str]], list[eventsub.SubscriptionPayload]]:
     query = """CREATE TABLE IF NOT EXISTS tokens(user_id TEXT PRIMARY KEY, token TEXT NOT NULL, refresh TEXT NOT NULL)"""
@@ -164,7 +92,12 @@ async def setup_database(db: asqlite.Pool) -> tuple[list[tuple[str, str]], list[
             if row["user_id"] == os.environ["BOT_ID"]:
                 continue
 
-            subs.extend([eventsub.ChatMessageSubscription(broadcaster_user_id=row["user_id"], user_id=os.environ["BOT_ID"])])
+            subs.extend([
+                eventsub.ChatMessageSubscription(broadcaster_user_id=row["user_id"], user_id=os.environ["BOT_ID"]),
+                eventsub.ChannelSubscribeSubscription(broadcaster_user_id=row["user_id"]),
+                eventsub.AdBreakBeginSubscription(broadcaster_user_id=row["user_id"]),
+                eventsub.ChannelFollowSubscription(broadcaster_user_id=row["user_id"], moderator_user_id=row["user_id"]),
+            ])
 
     return tokens, subs
 

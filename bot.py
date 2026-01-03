@@ -9,10 +9,8 @@ import twitchio
 from twitchio.ext import commands
 from twitchio import eventsub
 
-from commands.command_adbreak import CommandAdbreak
-from commands.command_songlist import CommandSongList
-from commands.command_raidmsg import CommandRaidMsg
-from commands.command_vlc import CommandVlc
+from components.basic_channel import BasicChannel
+from components.vlc import Vlc
 
 from typing import TYPE_CHECKING
 
@@ -62,10 +60,8 @@ class JulieBot(commands.AutoBot):
         return resp
     
     async def setup_hook(self) -> None:
-        await self.add_component(CommandAdbreak())
-        await self.add_component(CommandSongList())
-        await self.add_component(CommandRaidMsg())
-        await self.add_component(CommandVlc())
+        await self.add_component(BasicChannel())
+        await self.add_component(Vlc())
 
     async def event_ready(self) -> None:
         LOGGER.info("OK: logged in as %s", self.bot_id)

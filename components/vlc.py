@@ -6,13 +6,13 @@ import requests
 
 from twitchio.ext import commands
 
-LOGGER: logging.Logger = logging.getLogger("command_vlc")
+LOGGER: logging.Logger = logging.getLogger("vlc")
 
 ERROR_STR = "~err~"
 NOTPLAYING_STR = "`~notplaying~"
 REQ_TIMEOUT = 1.0
 
-class CommandVlc(commands.Component):
+class Vlc(commands.Component):
     def __init__(self) -> None:
         self.vlc_address = os.environ.get("COMMAND_VLC_ADDRESS", "")
         self.vlc_auth = (os.environ.get("COMMAND_VLC_LOGIN", ""), os.environ.get("COMMAND_VLC_PASS", ""))

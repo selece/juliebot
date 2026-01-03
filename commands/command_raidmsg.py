@@ -7,7 +7,7 @@ LOGGER: logging.Logger = logging.getLogger("command_raidmsg")
 
 class CommandRaidMsg(commands.Component):
     def __init__(self) -> None:
-        self.raidmsg_message = False if os.environ["COMMAND_RAIDMSG_MSG"] == "" else os.environ["COMMAND_RAIDMSG_MSG"]
+        self.raidmsg_message = os.environ.get("COMMAND_RAIDMSG_MSG", "")
 
     @commands.command(aliases=["raidmsg"])
     @commands.is_elevated()

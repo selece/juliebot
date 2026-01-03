@@ -1,11 +1,7 @@
-import datetime
-import json
-import os
-import logging
-import requests
-
 import asyncio
 import asqlite
+import os
+import logging
 
 from dotenv import load_dotenv
 
@@ -27,12 +23,22 @@ LOGGER: logging.Logger = logging.getLogger("JulieBot")
 class JulieBot(commands.AutoBot):
     def __init__(self, *, database: asqlite.Pool, subs: list[eventsub.SubscriptionPayload]) -> None:
         self.database = database
+
+        self.client_id_from_env = os.environ.get("CLIENT_ID", "")
+        self.client_secret_from_env = os.environ.get("CLIENT_SECRET", "")
+        self.bot_id_from_env = os.environ.get("BOT_ID", "")
+        self.owned_id_from_env = os.environ.get("OWNER_ID", "")
+        self.prefix_from_env = os.environ.get("PREFIX", "!")
+
+        if not self.client_id_from_env or not self.client_secret_from_env or not self.bot_id_from_env or not self.owned_id_from_env:
+            raise RuntimeError("invalid bot config - missing id/secrets; check env vars")
+
         super().__init__(
-            client_id=os.environ["CLIENT_ID"],
-            client_secret=os.environ["CLIENT_SECRET"],
-            bot_id=os.environ["BOT_ID"],
-            owner_id=os.environ["OWNER_ID"],
-            prefix="!",
+            client_id=self.client_id_from_env,
+            client_secret=self.client_secret_from_env,
+            bot_id=self.bot_id_from_env,
+            owner_id=self.owned_id_from_env,
+            prefix=self.prefix_from_env,
             subscriptions=subs,
             force_subscribe=True,
         )
@@ -89,11 +95,11 @@ async def setup_database(db: asqlite.Pool) -> tuple[list[tuple[str, str]], list[
         for row in rows:
             tokens.append((row["token"], row["refresh"]))
 
-            if row["user_id"] == os.environ["BOT_ID"]:
+            if row["user_id"] == os.environ.get("BOT_ID", "~INVALID~"):
                 continue
 
             subs.extend([
-                eventsub.ChatMessageSubscription(broadcaster_user_id=row["user_id"], user_id=os.environ["BOT_ID"]),
+                eventsub.ChatMessageSubscription(broadcaster_user_id=row["user_id"], user_id=os.environ.get("BOT_ID", "")),
                 eventsub.ChannelSubscribeSubscription(broadcaster_user_id=row["user_id"]),
                 eventsub.AdBreakBeginSubscription(broadcaster_user_id=row["user_id"]),
                 eventsub.ChannelFollowSubscription(broadcaster_user_id=row["user_id"], moderator_user_id=row["user_id"]),

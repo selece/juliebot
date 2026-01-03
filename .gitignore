@@ -2,3 +2,4 @@
 tokens.db
 Pipfile.lock
 venv/*
+*/__pycache__/*
